@@ -35,7 +35,11 @@ class _StaffScreenState extends State<StaffScreen> {
         .toList();
   }
 
-  void _refresh() => setState(() => _future = _load());
+  void _refresh() {
+    setState(() {
+      _future = _load();
+    });
+  }
 
   Future<void> _openForm() async {
     final created = await Navigator.of(context).push<bool>(

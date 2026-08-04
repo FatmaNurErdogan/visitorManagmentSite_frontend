@@ -133,7 +133,9 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
       ),
       body: AsyncStateBuilder<List<Host>>(
         future: _hostsFuture,
-        onRetry: () => setState(() => _hostsFuture = _loadHosts()),
+        onRetry: () => setState(() {
+          _hostsFuture = _loadHosts();
+        }),
         builder: (context, hosts) {
           return Form(
             key: _formKey,

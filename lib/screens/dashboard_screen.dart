@@ -28,6 +28,12 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   late Future<DashboardData> _future;
 
+  // Bir ziyaretin onay/checkin butonuna basılır basılmaz o karttaki
+  // butonları devre dışı bırakmak için: aksi halde ağ isteği (ve ardından
+  // gelen yenileme) tamamlanana kadar buton tıklanabilir kalır, kullanıcı
+  // aynı işlemi iki kez tetikleyebilir ("zaten işlendi" hatası kafa karıştırır).
+  final Set<String> _processingVisitIds = {};
+
   ApiClient get _client => context.read<AuthService>().client;
 
   @override
@@ -48,15 +54,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _refresh() => setState(() => _future = _load());
+  // Blok gövde şart: `() => _future = _load()` atamanın kendisini (bir
+  // Future) döndürür ve Flutter setState'e "callback bir Future döndürdü"
+  // hatasıyla senkron olarak fırlar — dışarıdaki try/catch bunu yanlışlıkla
+  // ağ hatası sanıp "sunucuya ulaşılamadı" gösterirdi, ekran yine de doğru
+  // veriyle güncellenirdi (atama zaten olmuştu) ama mesaj yanıltıcıydı.
+  void _refresh() {
+    setState(() {
+      _future = _load();
+    });
+  }
 
-  Future<void> _act(String path) async {
+  Future<void> _act(String visitId, String path, String successMessage) async {
+    setState(() => _processingVisitIds.add(visitId));
     try {
       await _client.post(path);
       _refresh();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+    } finally {
+      if (mounted) setState(() => _processingVisitIds.remove(visitId));
     }
   }
 
@@ -95,28 +115,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       message: 'Onay bekleyen ziyaret talebi yok.',
                     ),
                   for (final visit in data.pendingApprovals) ...[
-                    VisitCard(
-                      visit: visit,
-                      subtitle: visit.visitor.company ?? '—',
-                      showReason: true,
-                      actions: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => _act('/visits/${visit.id}/reject'),
-                              child: const Text('Reddet'),
+                    Builder(builder: (context) {
+                      final busy = _processingVisitIds.contains(visit.id);
+                      return VisitCard(
+                        visit: visit,
+                        subtitle: visit.visitor.company ?? '—',
+                        showReason: true,
+                        actions: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: busy
+                                    ? null
+                                    : () => _act(visit.id, '/visits/${visit.id}/reject', 'Talep reddedildi'),
+                                child: const Text('Reddet'),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () => _act('/visits/${visit.id}/approve'),
-                              child: const Text('Onayla'),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: busy
+                                    ? null
+                                    : () => _act(visit.id, '/visits/${visit.id}/approve', 'Onaylandı'),
+                                child: busy
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : const Text('Onayla'),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
+                          ],
+                        ),
+                      );
+                    }),
                     const SizedBox(height: 12),
                   ],
                   const SizedBox(height: 12),
@@ -134,21 +167,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       message: 'Giriş veya çıkış onayı bekleyen bir ziyaret bulunmuyor.',
                     ),
                   for (final visit in data.todaysVisits) ...[
-                    VisitCard(
-                      visit: visit,
-                      subtitle: '${visit.hostEmployee.name}\'i ziyaret ediyor',
-                      actions: switch (visit.status) {
-                        VisitStatus.accepted => ElevatedButton(
-                            onPressed: () => _act('/visits/${visit.id}/checkin'),
-                            child: const Text('Girişi Onayla'),
-                          ),
-                        VisitStatus.checkedIn => ElevatedButton(
-                            onPressed: () => _act('/visits/${visit.id}/checkout'),
-                            child: const Text('Çıkışı Onayla'),
-                          ),
-                        _ => null,
-                      },
-                    ),
+                    Builder(builder: (context) {
+                      final busy = _processingVisitIds.contains(visit.id);
+                      final busyIndicator = const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      );
+                      return VisitCard(
+                        visit: visit,
+                        subtitle: '${visit.hostEmployee.name}\'i ziyaret ediyor',
+                        actions: switch (visit.status) {
+                          VisitStatus.accepted => ElevatedButton(
+                              onPressed: busy
+                                  ? null
+                                  : () => _act(visit.id, '/visits/${visit.id}/checkin', 'Giriş onaylandı'),
+                              child: busy ? busyIndicator : const Text('Girişi Onayla'),
+                            ),
+                          VisitStatus.checkedIn => ElevatedButton(
+                              onPressed: busy
+                                  ? null
+                                  : () => _act(visit.id, '/visits/${visit.id}/checkout', 'Çıkış onaylandı'),
+                              child: busy ? busyIndicator : const Text('Çıkışı Onayla'),
+                            ),
+                          _ => null,
+                        },
+                      );
+                    }),
                     const SizedBox(height: 12),
                   ],
                 ],
