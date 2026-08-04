@@ -62,6 +62,20 @@ class VisitCard extends StatelessWidget {
             '${_dateFormat.format(visit.scheduledAt)} · ${_timeFormat.format(visit.scheduledAt)}',
             style: TextStyle(fontSize: 11, color: colors.soft, fontFeatures: const [FontFeature.tabularFigures()]),
           ),
+          if (visit.checkedInAt != null) ...[
+            const SizedBox(height: 3),
+            Text(
+              visit.checkedOutAt != null
+                  ? 'Giriş ${_timeFormat.format(visit.checkedInAt!)} · Çıkış ${_timeFormat.format(visit.checkedOutAt!)}'
+                  : 'Giriş ${_timeFormat.format(visit.checkedInAt!)}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: colors.acceptInk,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
           if (actions != null) ...[
             const SizedBox(height: 12),
             actions!,

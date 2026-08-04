@@ -20,13 +20,29 @@ class StaffShell extends StatefulWidget {
 class _StaffShellState extends State<StaffShell> {
   int _index = 0;
 
+  // Panel ve Kayıtlar sekmelerine her dönüşte verilerini tazelemek için:
+  // anahtarını değiştirmek Flutter'a o ekranı sıfırdan kurmasını (yeni
+  // initState → yeni API çağrısı) söyler. Aksi halde IndexedStack aynı
+  // widget örneğini canlı tutar ve başka bir yerde (ör. onay/checkin)
+  // değişen durum, sekmeye geri dönüldüğünde eski haliyle görünür kalır.
+  int _dashboardTick = 0;
+  int _recordsTick = 0;
+
+  void _onSelect(int value) {
+    setState(() {
+      if (value == 0) _dashboardTick++;
+      if (value == 1) _recordsTick++;
+      _index = value;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAdmin = context.watch<AuthService>().role == StaffRole.admin;
 
     final pages = [
-      const DashboardScreen(),
-      const RecordsScreen(),
+      DashboardScreen(key: ValueKey(_dashboardTick)),
+      RecordsScreen(key: ValueKey(_recordsTick)),
       if (isAdmin) const StaffScreen(),
       const ProfileScreen(),
     ];
@@ -36,7 +52,7 @@ class _StaffShellState extends State<StaffShell> {
       body: IndexedStack(index: index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
-        onDestinationSelected: (value) => setState(() => _index = value),
+        onDestinationSelected: _onSelect,
         destinations: [
           const NavigationDestination(
             icon: Icon(Icons.grid_view_outlined),

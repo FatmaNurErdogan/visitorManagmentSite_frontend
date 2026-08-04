@@ -105,9 +105,9 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
           company: _companyCtrl.text.trim(),
         ),
       ));
-    } on ApiException catch (e) {
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

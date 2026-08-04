@@ -17,6 +17,16 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+/// Herhangi bir hatayı (backend'in döndürdüğü [ApiException] veya sunucuya
+/// hiç ulaşılamadığında fırlayan bir [SocketException]/`ClientException`)
+/// kullanıcıya gösterilebilir bir mesaja çevirir. Ekranlardaki `catch (e)`
+/// bloklarının hepsi bunu kullanır — sadece [ApiException] yakalarsak
+/// bağlantı hataları sessizce yutulur.
+String friendlyErrorMessage(Object error) {
+  if (error is ApiException) return error.message;
+  return 'Sunucuya ulaşılamadı. Bağlantını kontrol edip tekrar dene.';
+}
+
 /// visitorSite'ın `/api/mobile` katmanına ince bir HTTP sarmalayıcı.
 ///
 /// Token, [AuthService] tarafından login/logout sırasında set edilir; burada

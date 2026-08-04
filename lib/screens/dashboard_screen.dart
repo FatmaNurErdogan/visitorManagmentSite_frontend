@@ -7,6 +7,7 @@ import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/async_state.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/visit_card.dart';
 
 class DashboardData {
@@ -52,9 +53,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       await _client.post(path);
       _refresh();
-    } on ApiException catch (e) {
+    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
     }
   }
 
@@ -84,9 +85,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 10),
                   if (data.pendingApprovals.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text('Şu an bekleyen talep yok.', style: TextStyle(color: colors.soft)),
+                    const EmptyState(
+                      icon: Icons.check_rounded,
+                      title: 'Her şey güncel',
+                      message: 'Onay bekleyen ziyaret talebi yok.',
                     ),
                   for (final visit in data.pendingApprovals) ...[
                     VisitCard(
@@ -122,9 +124,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 10),
                   if (data.todaysVisits.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text('Bugün için işlem bekleyen ziyaret yok.', style: TextStyle(color: colors.soft)),
+                    const EmptyState(
+                      icon: Icons.event_available_rounded,
+                      title: 'Bugün için bekleyen işlem yok',
+                      message: 'Giriş veya çıkış onayı bekleyen bir ziyaret bulunmuyor.',
                     ),
                   for (final visit in data.todaysVisits) ...[
                     VisitCard(
