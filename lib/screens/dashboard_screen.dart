@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/async_state.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/theme_toggle_button.dart';
 import '../widgets/visit_card.dart';
 
 class DashboardData {
@@ -68,7 +69,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final colors = context.vizitColors;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Merhaba, ${auth.name ?? ''}')),
+      appBar: AppBar(
+        title: Text('Merhaba, ${auth.name ?? ''}'),
+        actions: const [ThemeToggleButton()],
+      ),
       body: RefreshIndicator(
         onRefresh: () async => _refresh(),
         child: AsyncStateBuilder<DashboardData>(

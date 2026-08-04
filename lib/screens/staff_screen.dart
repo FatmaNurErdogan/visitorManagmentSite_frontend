@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/async_state.dart';
 import '../widgets/role_chip.dart';
+import '../widgets/theme_toggle_button.dart';
 import 'staff_form_screen.dart';
 
 class StaffScreen extends StatefulWidget {
@@ -48,7 +49,10 @@ class _StaffScreenState extends State<StaffScreen> {
     final colors = context.vizitColors;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Personel')),
+      appBar: AppBar(
+        title: const Text('Personel'),
+        actions: const [ThemeToggleButton()],
+      ),
       floatingActionButton: FloatingActionButton(onPressed: _openForm, child: const Icon(Icons.add)),
       body: RefreshIndicator(
         onRefresh: () async => _refresh(),

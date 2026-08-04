@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/staff_member.dart';
 import '../services/auth_service.dart';
+import '../services/theme_controller.dart';
 import '../theme/app_theme.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -11,6 +12,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
+    final themeController = context.watch<ThemeController>();
     final colors = context.vizitColors;
     final scheme = Theme.of(context).colorScheme;
 
@@ -57,7 +59,22 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
+            Text(
+              'GÖRÜNÜM',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: colors.soft, letterSpacing: 0.4),
+            ),
+            const SizedBox(height: 10),
+            SegmentedButton<ThemeMode>(
+              segments: const [
+                ButtonSegment(value: ThemeMode.system, label: Text('Sistem')),
+                ButtonSegment(value: ThemeMode.light, label: Text('Açık')),
+                ButtonSegment(value: ThemeMode.dark, label: Text('Koyu')),
+              ],
+              selected: {themeController.mode},
+              onSelectionChanged: (selection) => context.read<ThemeController>().setMode(selection.first),
+            ),
+            const SizedBox(height: 24),
             OutlinedButton(
               onPressed: () => context.read<AuthService>().logout(),
               child: const Text('Çıkış yap'),

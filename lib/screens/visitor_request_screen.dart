@@ -7,6 +7,7 @@ import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/async_state.dart';
+import '../widgets/theme_toggle_button.dart';
 import 'visitor_confirmation_screen.dart';
 
 class VisitorRequestScreen extends StatefulWidget {
@@ -64,7 +65,16 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
     );
     if (date == null || !mounted) return;
 
-    final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(now));
+    if (!mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(now),
+      // Türkiye için 24 saat formatı — cihazın diline bakılmaksızın AM/PM göstermesin.
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
     if (time == null) return;
 
     setState(() {
@@ -92,7 +102,10 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
         'company': _companyCtrl.text.trim().isEmpty ? null : _companyCtrl.text.trim(),
         'hostEmployeeId': _selectedHost!.id,
         'visitReason': _reasonCtrl.text.trim(),
-        'scheduledAt': _scheduledAt!.toIso8601String(),
+        // .toUtc() şart: aksi halde saat dilimi bilgisi olmadan gönderilir ve
+        // backend'in kendi saat dilimine göre yanlış yorumlanabilir (ör.
+        // sunucu UTC'deyse cihaz Türkiye saatinden 3 saat farklı okur).
+        'scheduledAt': _scheduledAt!.toUtc().toIso8601String(),
       });
 
       if (!mounted) return;
@@ -118,7 +131,10 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
     final colors = context.vizitColors;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ziyaret talebi')),
+      appBar: AppBar(
+        title: const Text('Ziyaret talebi'),
+        actions: const [ThemeToggleButton()],
+      ),
       body: AsyncStateBuilder<List<Host>>(
         future: _hostsFuture,
         onRetry: () => setState(() => _hostsFuture = _loadHosts()),

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'screens/landing_screen.dart';
 import 'screens/staff_shell.dart';
 import 'services/auth_service.dart';
+import 'services/theme_controller.dart';
 import 'theme/app_theme.dart';
 
 class VizitApp extends StatelessWidget {
@@ -11,12 +12,14 @@ class VizitApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = context.watch<ThemeController>().mode;
+
     return MaterialApp(
       title: 'Vizit',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       home: const AuthGate(),
     );
   }

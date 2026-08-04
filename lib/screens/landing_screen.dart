@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/theme_toggle_button.dart';
 import 'login_screen.dart';
 import 'visitor_request_screen.dart';
 
@@ -19,6 +20,7 @@ class LandingScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const Align(alignment: Alignment.topRight, child: ThemeToggleButton()),
               const Spacer(),
               Container(
                 width: 64,

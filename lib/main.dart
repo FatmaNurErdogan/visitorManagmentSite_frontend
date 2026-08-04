@@ -5,17 +5,22 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'services/api_client.dart';
 import 'services/auth_service.dart';
+import 'services/theme_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('tr_TR');
 
   final authService = AuthService(client: ApiClient());
-  await authService.restore();
+  final themeController = ThemeController();
+  await Future.wait([authService.restore(), themeController.restore()]);
 
   runApp(
-    ChangeNotifierProvider.value(
-      value: authService,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: authService),
+        ChangeNotifierProvider.value(value: themeController),
+      ],
       child: const VizitApp(),
     ),
   );

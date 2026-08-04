@@ -6,6 +6,7 @@ import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/async_state.dart';
+import '../widgets/theme_toggle_button.dart';
 import '../widgets/visit_card.dart';
 
 class RecordsScreen extends StatefulWidget {
@@ -47,7 +48,10 @@ class _RecordsScreenState extends State<RecordsScreen> {
     final colors = context.vizitColors;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Kayıtlar')),
+      appBar: AppBar(
+        title: const Text('Kayıtlar'),
+        actions: const [ThemeToggleButton()],
+      ),
       body: Column(
         children: [
           SizedBox(
