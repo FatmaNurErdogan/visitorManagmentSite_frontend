@@ -24,7 +24,6 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _companyCtrl = TextEditingController();
   final _reasonCtrl = TextEditingController();
 
   Host? _selectedHost;
@@ -50,7 +49,6 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
-    _companyCtrl.dispose();
     _reasonCtrl.dispose();
     super.dispose();
   }
@@ -99,7 +97,6 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
         'name': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
-        'company': _companyCtrl.text.trim().isEmpty ? null : _companyCtrl.text.trim(),
         'hostEmployeeId': _selectedHost!.id,
         'visitReason': _reasonCtrl.text.trim(),
         // .toUtc() şart: aksi halde saat dilimi bilgisi olmadan gönderilir ve
@@ -115,7 +112,6 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
           hostName: _selectedHost!.name,
           reason: _reasonCtrl.text.trim(),
           scheduledAt: _scheduledAt!,
-          company: _companyCtrl.text.trim(),
         ),
       ));
     } catch (e) {
@@ -162,11 +158,6 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(labelText: 'E-posta'),
                   validator: (v) => (v == null || !v.contains('@')) ? 'Geçerli bir e-posta gir' : null,
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _companyCtrl,
-                  decoration: const InputDecoration(labelText: 'Şirket (opsiyonel)'),
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<Host>(

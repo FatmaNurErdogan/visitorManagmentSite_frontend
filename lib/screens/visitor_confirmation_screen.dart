@@ -12,14 +12,12 @@ class VisitorConfirmationScreen extends StatelessWidget {
     required this.hostName,
     required this.reason,
     required this.scheduledAt,
-    this.company,
   });
 
   final String visitorName;
   final String hostName;
   final String reason;
   final DateTime scheduledAt;
-  final String? company;
 
   @override
   Widget build(BuildContext context) {
@@ -69,8 +67,6 @@ class VisitorConfirmationScreen extends StatelessWidget {
                     const SizedBox(height: 14),
                     _PassRow(label: 'Ziyaret edilen', value: hostName, colors: colors),
                     _PassRow(label: 'Tarih', value: _fullFormat.format(scheduledAt), colors: colors),
-                    if (company != null && company!.isNotEmpty)
-                      _PassRow(label: 'Şirket', value: company!, colors: colors),
                     _PassRow(label: 'Neden', value: reason, colors: colors),
                   ],
                 ),
