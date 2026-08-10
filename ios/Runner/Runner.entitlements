@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
+<!-- Universal Links: iOS only opens visitorSite's /visit/{token} links in this
+     app if it can fetch a matching apple-app-site-association from this exact
+     domain (see visitorSite's public/.well-known/). Placeholder below won't
+     verify against anything until it's a real, publicly reachable domain. -->
 <dict>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
