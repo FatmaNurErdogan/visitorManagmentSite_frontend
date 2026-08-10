@@ -9,3 +9,12 @@ const String apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
   defaultValue: 'http://10.0.2.2:3000/api/mobile',
 );
+
+/// Ziyaretçinin onay/red mailindeki link (`https://{deepLinkHost}/visit/{token}`)
+/// ile eşleştirdiğimiz host. Universal Links (iOS) / App Links (Android) bu
+/// domain üzerinden doğrulanıyor — gerçek, herkese açık bir HTTPS domain
+/// olmalı (localhost / LAN IP ile çalışmaz, Apple/Google doğrulayamaz).
+const String deepLinkHost = String.fromEnvironment(
+  'DEEP_LINK_HOST',
+  defaultValue: 'REPLACE_WITH_PRODUCTION_DOMAIN',
+);
