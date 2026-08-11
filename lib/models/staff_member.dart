@@ -26,6 +26,7 @@ class StaffMember {
     required this.email,
     required this.role,
     required this.createdAt,
+    this.department,
   });
 
   final String id;
@@ -33,6 +34,7 @@ class StaffMember {
   final String email;
   final String role;
   final DateTime createdAt;
+  final String? department;
 
   factory StaffMember.fromJson(Map<String, dynamic> json) {
     return StaffMember(
@@ -41,6 +43,7 @@ class StaffMember {
       email: json['email'] as String,
       role: json['role'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
+      department: json['department'] as String?,
     );
   }
 }
