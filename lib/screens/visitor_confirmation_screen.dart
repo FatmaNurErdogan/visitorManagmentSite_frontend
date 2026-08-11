@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../theme/app_theme.dart';
+import 'visitor_chat_screen.dart';
 
 final _fullFormat = DateFormat('d MMMM, HH:mm', 'tr_TR');
 
@@ -12,12 +13,16 @@ class VisitorConfirmationScreen extends StatelessWidget {
     required this.hostName,
     required this.reason,
     required this.scheduledAt,
+    required this.accessToken,
   });
 
   final String visitorName;
   final String hostName;
   final String reason;
   final DateTime scheduledAt;
+  // Backend'de talep PENDING iken de sohbet zaten açık — host onayını
+  // beklemeden ziyaretçi buradan direkt mesajlaşmaya başlayabilsin diye.
+  final String accessToken;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +53,7 @@ class VisitorConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                '$hostName onayladığında haber vereceğiz.',
+                '$hostName onayladığında haber vereceğiz. İstersen onay beklemeden şimdiden mesaj bırakabilirsin.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13.5, color: colors.soft),
               ),
@@ -72,6 +77,14 @@ class VisitorConfirmationScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => VisitorChatScreen(token: accessToken)),
+                ),
+                icon: const Icon(Icons.chat_bubble_outline_rounded),
+                label: Text('$hostName ile sohbet et'),
+              ),
+              const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
                 child: const Text('Yeni Talep Oluştur'),

@@ -93,7 +93,7 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
 
     setState(() => _submitting = true);
     try {
-      await _client.post('/visits', body: {
+      final data = await _client.post('/visits', body: {
         'name': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
@@ -103,7 +103,13 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
         // backend'in kendi saat dilimine göre yanlış yorumlanabilir (ör.
         // sunucu UTC'deyse cihaz Türkiye saatinden 3 saat farklı okur).
         'scheduledAt': _scheduledAt!.toUtc().toIso8601String(),
-      });
+      }) as Map<String, dynamic>;
+
+      // Sohbet talep anında (PENDING) zaten açık — host onaylamasını
+      // beklemeden ziyaretçi hemen mesajlaşmaya başlayabilsin diye
+      // accessToken'ı burada alıp bir sonraki ekrana taşıyoruz.
+      final visit = data['visit'] as Map<String, dynamic>;
+      final accessToken = visit['accessToken'] as String;
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(MaterialPageRoute(
@@ -112,6 +118,7 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
           hostName: _selectedHost!.name,
           reason: _reasonCtrl.text.trim(),
           scheduledAt: _scheduledAt!,
+          accessToken: accessToken,
         ),
       ));
     } catch (e) {

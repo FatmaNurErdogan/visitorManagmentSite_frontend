@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import 'dashboard_screen.dart';
 import 'profile_screen.dart';
 import 'records_screen.dart';
+import 'rooms_screen.dart';
 import 'staff_screen.dart';
 
 /// Personel girişi sonrası kök ekran: alt gezinme çubuğuyla Panel / Kayıtlar
@@ -27,11 +28,13 @@ class _StaffShellState extends State<StaffShell> {
   // değişen durum, sekmeye geri dönüldüğünde eski haliyle görünür kalır.
   int _dashboardTick = 0;
   int _recordsTick = 0;
+  int _roomsTick = 0;
 
   void _onSelect(int value) {
     setState(() {
       if (value == 0) _dashboardTick++;
       if (value == 1) _recordsTick++;
+      if (value == 2) _roomsTick++;
       _index = value;
     });
   }
@@ -43,6 +46,7 @@ class _StaffShellState extends State<StaffShell> {
     final pages = [
       DashboardScreen(key: ValueKey(_dashboardTick)),
       RecordsScreen(key: ValueKey(_recordsTick)),
+      RoomsScreen(key: ValueKey(_roomsTick)),
       if (isAdmin) const StaffScreen(),
       const ProfileScreen(),
     ];
@@ -63,6 +67,11 @@ class _StaffShellState extends State<StaffShell> {
             icon: Icon(Icons.list_alt_outlined),
             selectedIcon: Icon(Icons.list_alt_rounded),
             label: 'Kayıtlar',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.meeting_room_outlined),
+            selectedIcon: Icon(Icons.meeting_room_rounded),
+            label: 'Odalar',
           ),
           if (isAdmin)
             const NavigationDestination(

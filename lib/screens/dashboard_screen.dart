@@ -10,6 +10,7 @@ import '../widgets/async_state.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/visit_card.dart';
+import 'approve_visit_screen.dart';
 
 class DashboardData {
   DashboardData({required this.pendingApprovals, required this.todaysVisits});
@@ -80,6 +81,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // Onay artık tek tıkla değil — bir oda seçmek gerekiyor (bkz.
+  // ApproveVisitScreen). O ekran POST'u kendi yapıp true ile geri dönüyor.
+  Future<void> _approve(Visit visit) async {
+    final approved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ApproveVisitScreen(visit: visit)),
+    );
+    if (approved == true) {
+      _refresh();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem tamamlandı')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
@@ -134,9 +148,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: busy
-                                    ? null
-                                    : () => _act(visit.id, '/visits/${visit.id}/approve', 'Onaylandı'),
+                                onPressed: busy ? null : () => _approve(visit),
                                 child: busy
                                     ? const SizedBox(
                                         width: 18,
