@@ -6,6 +6,7 @@ class VisitStatus {
   VisitStatus._();
 
   static const pending = 'PENDING';
+  static const pendingAdminApproval = 'PENDING_ADMIN_APPROVAL';
   static const accepted = 'ACCEPTED';
   static const rejected = 'REJECTED';
   static const checkedIn = 'CHECKED_IN';
@@ -13,12 +14,23 @@ class VisitStatus {
   static const cancelled = 'CANCELLED';
   static const expired = 'EXPIRED';
 
-  static const all = [pending, accepted, rejected, checkedIn, checkedOut, cancelled, expired];
+  static const all = [
+    pending,
+    pendingAdminApproval,
+    accepted,
+    rejected,
+    checkedIn,
+    checkedOut,
+    cancelled,
+    expired,
+  ];
 
   static String label(String status) {
     switch (status) {
       case pending:
         return 'Bekliyor';
+      case pendingAdminApproval:
+        return 'Yönetici Onayı Bekliyor';
       case accepted:
         return 'Onaylandı';
       case rejected:
@@ -49,6 +61,7 @@ class Visit {
     this.respondedAt,
     this.checkedInAt,
     this.checkedOutAt,
+    this.adminRejectionReason,
   });
 
   final String id;
@@ -61,6 +74,7 @@ class Visit {
   final DateTime? respondedAt;
   final DateTime? checkedInAt;
   final DateTime? checkedOutAt;
+  final String? adminRejectionReason;
 
   factory Visit.fromJson(Map<String, dynamic> json) {
     DateTime? parseNullable(Object? value) => value == null ? null : DateTime.parse(value as String);
@@ -76,6 +90,7 @@ class Visit {
       respondedAt: parseNullable(json['respondedAt']),
       checkedInAt: parseNullable(json['checkedInAt']),
       checkedOutAt: parseNullable(json['checkedOutAt']),
+      adminRejectionReason: json['adminRejectionReason'] as String?,
     );
   }
 }
