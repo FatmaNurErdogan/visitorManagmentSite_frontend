@@ -86,6 +86,10 @@ class _StaffScreenState extends State<StaffScreen> {
                             Text(member.name, style: TextStyle(fontWeight: FontWeight.w700, color: colors.ink)),
                             const SizedBox(height: 2),
                             Text(member.email, style: TextStyle(fontSize: 12, color: colors.soft)),
+                            if (member.department != null && member.department!.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(member.department!, style: TextStyle(fontSize: 11.5, color: colors.soft)),
+                            ],
                           ],
                         ),
                       ),

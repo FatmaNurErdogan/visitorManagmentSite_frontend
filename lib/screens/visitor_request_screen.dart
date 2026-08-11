@@ -75,6 +75,15 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
     );
     if (time == null) return;
 
+    // Ziyaretler sadece mesai saatleri içinde alınabiliyor (backend de bunu
+    // doğruluyor) — burada erken uyarmak bir sunucu round-trip'i kurtarır.
+    if (time.hour < 9 || time.hour >= 18) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Lütfen 09:00–18:00 arasında bir saat seç.')));
+      return;
+    }
+
     setState(() {
       _scheduledAt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
     });
@@ -173,7 +182,7 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
                   initialValue: _selectedHost,
                   decoration: const InputDecoration(labelText: 'Kimi ziyaret ediyorsun'),
                   items: hosts
-                      .map((host) => DropdownMenuItem(value: host, child: Text(host.name)))
+                      .map((host) => DropdownMenuItem(value: host, child: Text(host.displayName)))
                       .toList(),
                   onChanged: (host) => setState(() => _selectedHost = host),
                 ),
@@ -188,7 +197,7 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
                   borderRadius: BorderRadius.circular(999),
                   onTap: _pickSchedule,
                   child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'Tarih & saat'),
+                    decoration: const InputDecoration(labelText: 'Tarih & saat (09:00–18:00)'),
                     isEmpty: false,
                     child: Text(
                       _scheduledAt == null
