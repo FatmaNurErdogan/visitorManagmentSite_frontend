@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../widgets/async_state.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/theme_toggle_button.dart';
+import 'mark_room_busy_screen.dart';
 import 'room_form_screen.dart';
 
 final _timeFormat = DateFormat('HH:mm', 'tr_TR');
@@ -93,7 +94,7 @@ class _RoomsScreenState extends State<RoomsScreen> {
               padding: const EdgeInsets.all(20),
               itemCount: rooms.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) => _RoomCard(room: rooms[index]),
+              itemBuilder: (context, index) => _RoomCard(room: rooms[index], onChanged: _refresh),
             );
           },
         ),
@@ -103,14 +104,46 @@ class _RoomsScreenState extends State<RoomsScreen> {
 }
 
 class _RoomCard extends StatelessWidget {
-  const _RoomCard({required this.room});
+  const _RoomCard({required this.room, required this.onChanged});
 
   final MeetingRoom room;
+  final VoidCallback onChanged;
+
+  Future<void> _markBusy(BuildContext context) async {
+    final marked = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => MarkRoomBusyScreen(room: room)),
+    );
+    if (marked == true) onChanged();
+  }
+
+  Future<void> _cancelBooking(BuildContext context, RoomBookingSummary booking) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Meşguliyeti iptal et'),
+        content: Text('"${booking.purpose}" için ayrılan zaman iptal edilsin mi? Oda bu aralıkta tekrar müsait olacak.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Vazgeç')),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('İptal et')),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await context.read<AuthService>().client.delete('/rooms/${room.id}/bookings/${booking.id}');
+      onChanged();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.vizitColors;
     final scheme = Theme.of(context).colorScheme;
+    final isAdmin = context.watch<AuthService>().role == StaffRole.admin;
     final now = DateTime.now();
 
     final current = _firstWhereOrNull(room.bookings, (b) => !b.startTime.isAfter(now) && b.endTime.isAfter(now));
@@ -179,11 +212,50 @@ class _RoomCard extends StatelessWidget {
           ],
           if (current != null || next != null) ...[
             const SizedBox(height: 10),
-            Text(
-              current != null
+            Builder(builder: (context) {
+              final shown = current ?? next!;
+              final label = current != null
                   ? usedByLabel(current)
-                  : 'Sıradaki: ${_dateTimeFormat.format(next!.startTime)} — ${usedByLabel(next)}',
-              style: TextStyle(fontSize: 12.5, color: scheme.primary, fontWeight: FontWeight.w600),
+                  : 'Sıradaki: ${_dateTimeFormat.format(next!.startTime)} — ${usedByLabel(next)}';
+              // Ziyarete bağlı rezervasyonlar buradan iptal edilemez — backend
+              // bunu reddediyor, bu yüzden butonu sadece bağımsız (iç toplantı)
+              // rezervasyonlarda gösteriyoruz.
+              final cancellable = isAdmin && shown.visitorName == null;
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TextStyle(fontSize: 12.5, color: scheme.primary, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  if (cancellable)
+                    InkWell(
+                      onTap: () => _cancelBooking(context, shown),
+                      borderRadius: BorderRadius.circular(999),
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: Text(
+                          'İptal et',
+                          style: TextStyle(fontSize: 12.5, color: colors.dangerInk, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            }),
+          ],
+          if (isAdmin) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _markBusy(context),
+                icon: const Icon(Icons.event_busy_rounded, size: 18),
+                label: const Text('Meşgul olarak işaretle'),
+              ),
             ),
           ],
         ],
