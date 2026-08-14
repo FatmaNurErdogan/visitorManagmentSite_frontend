@@ -17,6 +17,7 @@ class StatusPill extends StatelessWidget {
     late final Color ink;
     switch (status) {
       case VisitStatus.pending:
+      case VisitStatus.pendingAdminApproval:
         bg = colors.warnBg;
         ink = colors.warnInk;
         break;
