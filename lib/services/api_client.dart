@@ -18,13 +18,51 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+/// Backend hata mesajları İngilizce (web arayüzüyle paylaşılıyor) — bu
+/// uygulama tamamen Türkçe olduğu için bilinen mesajları burada çeviriyoruz.
+/// Eşleşmeyen (yeni/beklenmeyen) bir mesaj gelirse olduğu gibi gösteriliyor,
+/// hatasız çalışmaya devam eder — sadece o mesaj İngilizce kalır.
+const Map<String, String> _errorTranslations = {
+  'Unauthorized': 'Bu işlem için giriş yapmanız gerekiyor.',
+  'Invalid request body.': 'Geçersiz istek.',
+  'Please give the room a name.': 'Lütfen odaya bir isim verin.',
+  'Capacity must be a positive whole number.': 'Kapasite pozitif bir tam sayı olmalı.',
+  'A room with this name already exists.': 'Bu isimde bir oda zaten var.',
+  'Please select a meeting room.': 'Lütfen bir toplantı odası seçin.',
+  'This visit request has already been processed.': 'Bu ziyaret talebi zaten işlendi.',
+  "Please pick an end time after the visit's scheduled start.":
+      'Lütfen ziyaretin başlangıcından sonraki bir bitiş saati seçin.',
+  'This room is already booked for that time.': 'Bu oda o saat aralığında zaten rezerve edilmiş.',
+  'A room request for this visit is already pending.': 'Bu ziyaret için bir oda talebi zaten bekliyor.',
+  'Please describe the purpose of this booking.': 'Lütfen bu rezervasyonun amacını yazın.',
+  'Please provide valid start and end times.': 'Lütfen geçerli bir başlangıç ve bitiş saati girin.',
+  'Please pick a start time in the future.': 'Lütfen gelecekte bir başlangıç saati seçin.',
+  'End time must be after the start time.': 'Bitiş saati başlangıç saatinden sonra olmalı.',
+  'Booking not found.': 'Rezervasyon bulunamadı.',
+  "This booking is tied to a visit and can't be cancelled here.":
+      'Bu rezervasyon bir ziyarete bağlı, buradan iptal edilemez.',
+  'Only an active booking can be cancelled.': 'Sadece aktif bir rezervasyon iptal edilebilir.',
+  'This room is already booked for that time — reject this ticket instead.':
+      'Bu oda o saat aralığında zaten rezerve edilmiş — bunun yerine bu talebi reddedin.',
+  "Chat isn't available for this visit.": 'Bu ziyaret için sohbet kullanılamıyor.',
+  "Message can't be empty.": 'Mesaj boş olamaz.',
+  'Too many requests. Please slow down.': 'Çok fazla istek gönderildi. Lütfen biraz yavaşlayın.',
+  'Too many messages. Please slow down.': 'Çok fazla mesaj gönderildi. Lütfen biraz yavaşlayın.',
+};
+
 /// Herhangi bir hatayı (backend'in döndürdüğü [ApiException] veya sunucuya
 /// hiç ulaşılamadığında fırlayan bir [SocketException]/`ClientException`)
 /// kullanıcıya gösterilebilir bir mesaja çevirir. Ekranlardaki `catch (e)`
 /// bloklarının hepsi bunu kullanır — sadece [ApiException] yakalarsak
 /// bağlantı hataları sessizce yutulur.
 String friendlyErrorMessage(Object error) {
-  if (error is ApiException) return error.message;
+  if (error is ApiException) {
+    if (error.message.length > 'Message can\'t be longer than '.length &&
+        error.message.startsWith("Message can't be longer than")) {
+      return 'Mesaj çok uzun (en fazla 2000 karakter).';
+    }
+    return _errorTranslations[error.message] ?? error.message;
+  }
   return 'Sunucuya ulaşılamadı. Bağlantını kontrol edip tekrar dene.';
 }
 

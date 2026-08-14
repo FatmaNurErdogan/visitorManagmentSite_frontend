@@ -29,8 +29,7 @@ class AsyncStateBuilder<T> extends StatelessWidget {
           );
         }
         if (snapshot.hasError) {
-          final error = snapshot.error;
-          final message = error is ApiException ? error.message : 'Bir şeyler ters gitti, tekrar dene.';
+          final message = friendlyErrorMessage(snapshot.error!);
           return Padding(
             padding: const EdgeInsets.all(32),
             child: Column(

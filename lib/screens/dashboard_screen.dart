@@ -99,7 +99,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final auth = context.watch<AuthService>();
     final role = auth.role;
     final showApprovals = role == StaffRole.employee || role == StaffRole.admin;
-    final showToday = role == StaffRole.receptionist || role == StaffRole.admin;
+    // Giriş/çıkış onayı sadece resepsiyonun işi — admin dahil burada değil
+    // (bkz. backend'deki src/actions/visits.ts requireReceptionist).
+    final showToday = role == StaffRole.receptionist;
     final colors = context.vizitColors;
     final scheme = Theme.of(context).colorScheme;
 

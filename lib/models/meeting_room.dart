@@ -22,8 +22,10 @@ class RoomBookingSummary {
     final visit = json['visit'] as Map<String, dynamic>?;
     return RoomBookingSummary(
       id: json['id'] as String,
-      startTime: DateTime.parse(json['startTime'] as String),
-      endTime: DateTime.parse(json['endTime'] as String),
+      // Backend UTC döndürüyor — .toLocal() olmadan oda saatleri 3 saat
+      // geride görünür (bkz. models/visit.dart'taki aynı düzeltme).
+      startTime: DateTime.parse(json['startTime'] as String).toLocal(),
+      endTime: DateTime.parse(json['endTime'] as String).toLocal(),
       purpose: json['purpose'] as String,
       requestedByName: (json['requestedBy'] as Map<String, dynamic>)['name'] as String,
       visitorName: visit == null ? null : (visit['visitor'] as Map<String, dynamic>)['name'] as String,

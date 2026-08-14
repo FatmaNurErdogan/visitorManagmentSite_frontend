@@ -130,7 +130,7 @@ class OfflineMock {
     return [
       {
         'id': 'room-1',
-        'name': 'Gökkuşağı',
+        'name': 'Toplantı Odası 1',
         'location': '3. Kat',
         'capacity': 6,
         'perks': 'Projeksiyon, Beyaz tahta',
@@ -147,7 +147,7 @@ class OfflineMock {
       },
       {
         'id': 'room-2',
-        'name': 'Deniz Feneri',
+        'name': 'Toplantı Odası 2',
         'location': '2. Kat',
         'capacity': 10,
         'perks': 'TV, Video konferans',
@@ -167,7 +167,7 @@ class OfflineMock {
       },
       {
         'id': 'room-3',
-        'name': 'Atölye',
+        'name': 'Toplantı Odası 3',
         'location': '1. Kat',
         'capacity': 4,
         'perks': '',
@@ -210,6 +210,42 @@ class OfflineMock {
 
     if (method == 'GET' && path == '/rooms') {
       return {'rooms': _rooms};
+    }
+
+    if (method == 'GET' && path == '/rooms/calendar') {
+      final now = DateTime.now();
+      var year = now.year;
+      var month = now.month;
+      final parts = query?['month']?.split('-');
+      if (parts != null && parts.length == 2) {
+        year = int.tryParse(parts[0]) ?? year;
+        month = int.tryParse(parts[1]) ?? month;
+      }
+      final monthStart = DateTime(year, month, 1);
+      final monthEnd = DateTime(year, month + 1, 1);
+
+      final bookings = <Map<String, dynamic>>[];
+      for (final room in _rooms) {
+        for (final booking in room['bookings'] as List<Map<String, dynamic>>) {
+          final start = DateTime.parse(booking['startTime'] as String);
+          final end = DateTime.parse(booking['endTime'] as String);
+          if (!start.isBefore(monthEnd) || !end.isAfter(monthStart)) continue;
+
+          final visit = booking['visit'] as Map<String, dynamic>?;
+          bookings.add({
+            'id': booking['id'],
+            'roomId': room['id'],
+            'roomName': room['name'],
+            'startTime': booking['startTime'],
+            'endTime': booking['endTime'],
+            'purpose': booking['purpose'],
+            'label': visit != null
+                ? '${(visit['visitor'] as Map)['name']} (${(visit['hostEmployee'] as Map)['name']} ziyaretinde)'
+                : '${(booking['requestedBy'] as Map)['name']} (iç toplantı)',
+          });
+        }
+      }
+      return {'year': year, 'month': month, 'bookings': bookings};
     }
 
     if (method == 'GET' && path == '/staff') {

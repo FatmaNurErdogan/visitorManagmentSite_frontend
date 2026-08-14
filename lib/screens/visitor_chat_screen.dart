@@ -63,6 +63,12 @@ class _VisitorChatScreenState extends State<VisitorChatScreen> {
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
+      // 404 = sohbet artık kapalı (ziyaret reddedildi/iptal oldu/süresi
+      // doldu ya da token geçersiz) — bu kalıcı bir durum, tekrar denemenin
+      // anlamı yok. Diğer hatalarda (ağ vs.) polling devam eder.
+      if (e is ApiException && e.statusCode == 404) {
+        _pollTimer?.cancel();
+      }
       setState(() {
         _loading = false;
         _errorMessage = friendlyErrorMessage(e);
