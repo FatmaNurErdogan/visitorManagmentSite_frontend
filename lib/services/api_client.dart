@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config.dart';
-import 'offline_mock.dart';
 
 /// `/api/mobile/*` bir hata döndürdüğünde (`{ "error": "..." }`) fırlatılır.
 class ApiException implements Exception {
@@ -77,15 +76,6 @@ class ApiClient {
 
   final http.Client _http;
   String? token;
-  OfflineMock? _offline;
-
-  /// SADECE DEBUG: bundan sonraki tüm istekler gerçek ağa hiç çıkmadan
-  /// [OfflineMock] tarafından bellek-içi sahte verilerle yanıtlanır.
-  void enableOfflineMock({String currentStaffName = 'Debug Admin'}) {
-    _offline = OfflineMock(currentStaffName: currentStaffName);
-  }
-
-  bool get isOfflineMock => _offline != null;
 
   Uri _uri(String path, [Map<String, String>? query]) {
     return Uri.parse('$apiBaseUrl$path').replace(queryParameters: query);
@@ -101,13 +91,11 @@ class ApiClient {
       };
 
   Future<dynamic> get(String path, {Map<String, String>? query}) async {
-    if (_offline case final offline?) return offline.handle('GET', path, query: query);
     final response = await _http.get(_uri(path, query), headers: _headers);
     return _decode(response);
   }
 
   Future<dynamic> post(String path, {Object? body}) async {
-    if (_offline case final offline?) return offline.handle('POST', path, body: body);
     final response = await _http.post(
       _uri(path),
       headers: _headers,
@@ -117,7 +105,6 @@ class ApiClient {
   }
 
   Future<dynamic> delete(String path) async {
-    if (_offline case final offline?) return offline.handle('DELETE', path);
     final response = await _http.delete(_uri(path), headers: _headers);
     return _decode(response);
   }
