@@ -10,6 +10,7 @@ import '../widgets/async_state.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/visit_card.dart';
+import 'admin_approve_room_screen.dart';
 
 class DashboardData {
   DashboardData({
@@ -118,6 +119,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (reason == null || reason.isEmpty || !mounted) return;
     await _act(visit.id, '/visits/${visit.id}/reject', 'Talep reddedildi', body: {'reason': reason});
+  }
+
+  // Departman admin'i son onayı verirken isteğe bağlı bir oda da
+  // atayabilsin diye — bkz. AdminApproveRoomScreen / backend'deki
+  // approveVisitByAdminCore. O ekran POST'u kendi yapıp true ile geri dönüyor.
+  Future<void> _approveAsAdmin(Visit visit) async {
+    final approved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => AdminApproveRoomScreen(visit: visit)),
+    );
+    if (approved == true) {
+      _refresh();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Onaylandı')));
+    }
   }
 
   @override
@@ -238,9 +253,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: busy
-                                    ? null
-                                    : () => _act(visit.id, '/visits/${visit.id}/approve', 'Onaylandı'),
+                                onPressed: busy ? null : () => _approveAsAdmin(visit),
                                 child: busy ? busyIndicator : const Text('Onayla'),
                               ),
                             ),
