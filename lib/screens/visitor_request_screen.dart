@@ -158,6 +158,22 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
         'scheduledEndAt': _scheduledEndAt!.toUtc().toIso8601String(),
       }) as Map<String, dynamic>;
 
+      // Host'un o saatte başka kabul edilmiş bir ziyareti varsa talep
+      // otomatik reddedilir — bu durumda "onay bekliyor" ekranı yerine
+      // farklı bir saat denemesini söyleyen bir mesaj gösteriyoruz.
+      final scheduleConflict = data['scheduleConflict'] as bool? ?? false;
+      if (scheduleConflict) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+            'Bu kişi o saatte başka bir ziyaret için müsait değil. '
+            'E-postana bilgi gönderdik, lütfen farklı bir saat seç.',
+          ),
+          duration: Duration(seconds: 6),
+        ));
+        return;
+      }
+
       // Sohbet talep anında (PENDING) zaten açık — host onaylamasını
       // beklemeden ziyaretçi hemen mesajlaşmaya başlayabilsin diye
       // accessToken'ı burada alıp bir sonraki ekrana taşıyoruz.

@@ -12,6 +12,7 @@ import '../widgets/async_state.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/theme_toggle_button.dart';
 import 'mark_room_busy_screen.dart';
+import 'room_booking_screen.dart';
 import 'room_form_screen.dart';
 
 String _dayKey(DateTime date) =>
@@ -114,6 +115,8 @@ class _RoomCard extends StatelessWidget {
   final MeetingRoom room;
   final VoidCallback onChanged;
 
+  // Admin, odayı ziyaretten bağımsız olarak doğrudan (onaysız) meşgul
+  // işaretleyebilir — bkz. backend createDirectRoomBookingCore.
   Future<void> _markBusy(BuildContext context) async {
     final marked = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => MarkRoomBusyScreen(room: room)),
@@ -142,6 +145,15 @@ class _RoomCard extends StatelessWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
     }
+  }
+
+  // Herhangi bir personel, odayı bir onay talebi olarak rezerve edebilir —
+  // bkz. backend createRoomBookingCore (PENDING, admin onayı gerekir).
+  Future<void> _reserve(BuildContext context) async {
+    final booked = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => RoomBookingScreen(room: room)),
+    );
+    if (booked == true) onChanged();
   }
 
   @override
@@ -242,6 +254,31 @@ class _RoomCard extends StatelessWidget {
               ),
             ),
           ],
+          if (room.bookings.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Takvim',
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: colors.soft),
+            ),
+            const SizedBox(height: 6),
+            ...room.bookings.map(
+              (b) => Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text(
+                  '${_dateTimeFormat.format(b.startTime)} – ${_timeFormat.format(b.endTime)} · ${usedByLabel(b)}',
+                  style: TextStyle(fontSize: 11.5, color: colors.soft),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => _reserve(context),
+              child: const Text('Rezervasyon Yap'),
+            ),
+          ),
         ],
       ),
     );

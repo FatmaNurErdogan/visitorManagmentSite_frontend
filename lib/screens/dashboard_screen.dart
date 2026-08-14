@@ -10,12 +10,16 @@ import '../widgets/async_state.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/visit_card.dart';
-import 'approve_visit_screen.dart';
 
 class DashboardData {
-  DashboardData({required this.pendingApprovals, required this.todaysVisits});
+  DashboardData({
+    required this.pendingApprovals,
+    required this.pendingAdminApprovals,
+    required this.todaysVisits,
+  });
 
   final List<Visit> pendingApprovals;
+  final List<Visit> pendingAdminApprovals;
   final List<Visit> todaysVisits;
 }
 
@@ -49,6 +53,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       pendingApprovals: (data['pendingApprovals'] as List<dynamic>)
           .map((json) => Visit.fromJson(json as Map<String, dynamic>))
           .toList(),
+      pendingAdminApprovals: (data['pendingAdminApprovals'] as List<dynamic>? ?? [])
+          .map((json) => Visit.fromJson(json as Map<String, dynamic>))
+          .toList(),
       todaysVisits: (data['todaysVisits'] as List<dynamic>)
           .map((json) => Visit.fromJson(json as Map<String, dynamic>))
           .toList(),
@@ -66,10 +73,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  Future<void> _act(String visitId, String path, String successMessage) async {
+  Future<void> _act(String visitId, String path, String successMessage, {Map<String, dynamic>? body}) async {
     setState(() => _processingVisitIds.add(visitId));
     try {
-      await _client.post(path);
+      await _client.post(path, body: body);
       _refresh();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
@@ -81,17 +88,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // Onay artık tek tıkla değil — bir oda seçmek gerekiyor (bkz.
-  // ApproveVisitScreen). O ekran POST'u kendi yapıp true ile geri dönüyor.
-  Future<void> _approve(Visit visit) async {
-    final approved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => ApproveVisitScreen(visit: visit)),
+  // Departman admin'i son aşamada reddederken bir gerekçe yazmak zorunda —
+  // bu bir dialog ile isteniyor, boş bırakılamaz.
+  Future<void> _rejectWithReason(Visit visit) async {
+    final controller = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reddetme nedeni'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 3,
+          decoration: const InputDecoration(hintText: 'Neden reddediyorsun?'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Vazgeç')),
+          FilledButton(
+            onPressed: () {
+              final text = controller.text.trim();
+              if (text.isEmpty) return;
+              Navigator.of(context).pop(text);
+            },
+            child: const Text('Reddet'),
+          ),
+        ],
+      ),
     );
-    if (approved == true) {
-      _refresh();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem tamamlandı')));
-    }
+
+    if (reason == null || reason.isEmpty || !mounted) return;
+    await _act(visit.id, '/visits/${visit.id}/reject', 'Talep reddedildi', body: {'reason': reason});
   }
 
   @override
@@ -101,6 +127,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final showApprovals = role == StaffRole.employee || role == StaffRole.admin;
     // Giriş/çıkış onayı sadece resepsiyonun işi — admin dahil burada değil
     // (bkz. backend'deki src/actions/visits.ts requireReceptionist).
+    final showAdminApprovals = role == StaffRole.admin;
     final showToday = role == StaffRole.receptionist;
     final colors = context.vizitColors;
     final scheme = Theme.of(context).colorScheme;
@@ -140,6 +167,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   for (final visit in data.pendingApprovals) ...[
                     Builder(builder: (context) {
                       final busy = _processingVisitIds.contains(visit.id);
+                      final busyIndicator = const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      );
                       return VisitCard(
                         visit: visit,
                         subtitle: visit.visitor.company ?? '—',
@@ -157,14 +189,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: busy ? null : () => _approve(visit),
-                                child: busy
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                      )
-                                    : const Text('Onayla'),
+                                onPressed: busy
+                                    ? null
+                                    : () => _act(visit.id, '/visits/${visit.id}/approve', 'Talep onaylandı'),
+                                child: busy ? busyIndicator : const Text('Onayla'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 12),
+                  ],
+                  const SizedBox(height: 12),
+                ],
+                if (showAdminApprovals) ...[
+                  Text(
+                    'Son onayını bekleyenler · ${data.pendingAdminApprovals.length}',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: colors.soft),
+                  ),
+                  const SizedBox(height: 10),
+                  if (data.pendingAdminApprovals.isEmpty)
+                    const EmptyState(
+                      icon: Icons.check_rounded,
+                      title: 'Her şey güncel',
+                      message: 'Departmanının son onayını beklediği bir talep yok.',
+                    ),
+                  for (final visit in data.pendingAdminApprovals) ...[
+                    Builder(builder: (context) {
+                      final busy = _processingVisitIds.contains(visit.id);
+                      final busyIndicator = const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      );
+                      return VisitCard(
+                        visit: visit,
+                        subtitle: '${visit.hostEmployee.name} onayladı, senin onayını bekliyor',
+                        showReason: true,
+                        actions: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: busy ? null : () => _rejectWithReason(visit),
+                                child: const Text('Reddet'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: busy
+                                    ? null
+                                    : () => _act(visit.id, '/visits/${visit.id}/approve', 'Onaylandı'),
+                                child: busy ? busyIndicator : const Text('Onayla'),
                               ),
                             ),
                           ],
