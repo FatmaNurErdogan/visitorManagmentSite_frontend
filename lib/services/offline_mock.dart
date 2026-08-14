@@ -15,6 +15,7 @@ class OfflineMock {
   late final List<Map<String, dynamic>> _staff = _seedStaff();
   late final List<Map<String, dynamic>> _visits = _seedVisits();
   late final List<Map<String, dynamic>> _rooms = _seedRooms();
+  late final List<Map<String, dynamic>> _departments = _seedDepartments();
 
   int _idCounter = 1000;
   String _nextId(String prefix) => '$prefix-${_idCounter++}';
@@ -130,7 +131,7 @@ class OfflineMock {
     return [
       {
         'id': 'room-1',
-        'name': 'Gökkuşağı',
+        'name': 'Toplantı Odası 1',
         'location': '3. Kat',
         'capacity': 6,
         'perks': 'Projeksiyon, Beyaz tahta',
@@ -147,7 +148,7 @@ class OfflineMock {
       },
       {
         'id': 'room-2',
-        'name': 'Deniz Feneri',
+        'name': 'Toplantı Odası 2',
         'location': '2. Kat',
         'capacity': 10,
         'perks': 'TV, Video konferans',
@@ -167,12 +168,20 @@ class OfflineMock {
       },
       {
         'id': 'room-3',
-        'name': 'Atölye',
+        'name': 'Toplantı Odası 3',
         'location': '1. Kat',
         'capacity': 4,
         'perks': '',
         'bookings': <Map<String, dynamic>>[],
       },
+    ];
+  }
+
+  List<Map<String, dynamic>> _seedDepartments() {
+    return [
+      {'id': 'dept-1', 'name': 'Yönetim'},
+      {'id': 'dept-2', 'name': 'Ürün'},
+      {'id': 'dept-3', 'name': 'Mühendislik'},
     ];
   }
 
@@ -212,8 +221,60 @@ class OfflineMock {
       return {'rooms': _rooms};
     }
 
+    if (method == 'GET' && path == '/rooms/calendar') {
+      final now = DateTime.now();
+      var year = now.year;
+      var month = now.month;
+      final parts = query?['month']?.split('-');
+      if (parts != null && parts.length == 2) {
+        year = int.tryParse(parts[0]) ?? year;
+        month = int.tryParse(parts[1]) ?? month;
+      }
+      final monthStart = DateTime(year, month, 1);
+      final monthEnd = DateTime(year, month + 1, 1);
+
+      final bookings = <Map<String, dynamic>>[];
+      for (final room in _rooms) {
+        for (final booking in room['bookings'] as List<Map<String, dynamic>>) {
+          final start = DateTime.parse(booking['startTime'] as String);
+          final end = DateTime.parse(booking['endTime'] as String);
+          if (!start.isBefore(monthEnd) || !end.isAfter(monthStart)) continue;
+
+          final visit = booking['visit'] as Map<String, dynamic>?;
+          bookings.add({
+            'id': booking['id'],
+            'roomId': room['id'],
+            'roomName': room['name'],
+            'startTime': booking['startTime'],
+            'endTime': booking['endTime'],
+            'purpose': booking['purpose'],
+            'label': visit != null
+                ? '${(visit['visitor'] as Map)['name']} (${(visit['hostEmployee'] as Map)['name']} ziyaretinde)'
+                : '${(booking['requestedBy'] as Map)['name']} (iç toplantı)',
+          });
+        }
+      }
+      return {'year': year, 'month': month, 'bookings': bookings};
+    }
+
     if (method == 'GET' && path == '/staff') {
       return {'staff': _staff};
+    }
+
+    if (method == 'GET' && path == '/departments') {
+      return {'departments': _departments};
+    }
+
+    if (method == 'POST' && path == '/departments') {
+      final name = (b['name'] as String?)?.trim() ?? '';
+      if (name.isEmpty) {
+        throw ApiException('Please give the department a name.', statusCode: 400);
+      }
+      if (_departments.any((d) => d['name'] == name)) {
+        throw ApiException('A department with this name already exists.', statusCode: 400);
+      }
+      _departments.add({'id': _nextId('dept'), 'name': name});
+      return {'success': true};
     }
 
     if (method == 'GET' && path == '/hosts') {
@@ -261,7 +322,7 @@ class OfflineMock {
         'name': b['name'],
         'email': b['email'],
         'role': b['role'],
-        'department': null,
+        'department': b['department'],
         'createdAt': _iso(DateTime.now()),
       };
       _staff.add(staff);

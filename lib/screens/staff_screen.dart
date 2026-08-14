@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/async_state.dart';
 import '../widgets/role_chip.dart';
 import '../widgets/theme_toggle_button.dart';
+import 'departments_screen.dart';
 import 'staff_form_screen.dart';
 
 class StaffScreen extends StatefulWidget {
@@ -51,11 +52,22 @@ class _StaffScreenState extends State<StaffScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.vizitColors;
+    final isAdmin = context.watch<AuthService>().role == StaffRole.admin;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Personel'),
-        actions: const [ThemeToggleButton()],
+        actions: [
+          if (isAdmin)
+            IconButton(
+              tooltip: 'Departmanlar',
+              icon: const Icon(Icons.apartment_rounded),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DepartmentsScreen()),
+              ),
+            ),
+          const ThemeToggleButton(),
+        ],
       ),
       floatingActionButton: FloatingActionButton(onPressed: _openForm, child: const Icon(Icons.add)),
       body: RefreshIndicator(

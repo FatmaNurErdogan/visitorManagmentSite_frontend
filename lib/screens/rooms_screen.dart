@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../models/calendar_booking.dart';
 import '../models/meeting_room.dart';
 import '../models/staff_member.dart';
 import '../services/api_client.dart';
@@ -12,6 +13,9 @@ import '../widgets/empty_state.dart';
 import '../widgets/theme_toggle_button.dart';
 import 'mark_room_busy_screen.dart';
 import 'room_form_screen.dart';
+
+String _dayKey(DateTime date) =>
+    '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
 final _timeFormat = DateFormat('HH:mm', 'tr_TR');
 final _dateTimeFormat = DateFormat('d MMMM, HH:mm', 'tr_TR');
@@ -79,22 +83,23 @@ class _RoomsScreenState extends State<RoomsScreen> {
           future: _future,
           onRetry: _refresh,
           builder: (context, rooms) {
-            if (rooms.isEmpty) {
-              return ListView(
-                children: const [
-                  EmptyState(
+            return ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                if (rooms.isEmpty)
+                  const EmptyState(
                     icon: Icons.meeting_room_outlined,
                     title: 'Henüz oda yok',
                     message: 'Bir yönetici toplantı odası eklediğinde burada görünecek.',
-                  ),
-                ],
-              );
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.all(20),
-              itemCount: rooms.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) => _RoomCard(room: rooms[index], onChanged: _refresh),
+                  )
+                else
+                  for (final room in rooms) ...[
+                    _RoomCard(room: room, onChanged: _refresh),
+                    const SizedBox(height: 12),
+                  ],
+                const SizedBox(height: 12),
+                const _RoomCalendarSection(),
+              ],
             );
           },
         ),
@@ -185,30 +190,9 @@ class _RoomCard extends StatelessWidget {
               ),
             ],
           ),
-          if (room.location != null || room.capacity != null) ...[
+          if (room.capacity != null) ...[
             const SizedBox(height: 4),
-            Text(
-              [if (room.location != null) room.location!, if (room.capacity != null) '${room.capacity} kişi'].join(
-                ' · ',
-              ),
-              style: TextStyle(fontSize: 12.5, color: colors.soft),
-            ),
-          ],
-          if (room.perksList.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: room.perksList
-                  .map(
-                    (perk) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: colors.chipBg, borderRadius: BorderRadius.circular(999)),
-                      child: Text(perk, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: colors.chipInk)),
-                    ),
-                  )
-                  .toList(),
-            ),
+            Text('${room.capacity} kişi', style: TextStyle(fontSize: 12.5, color: colors.soft)),
           ],
           if (current != null || next != null) ...[
             const SizedBox(height: 10),
@@ -260,6 +244,253 @@ class _RoomCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Odalar ekranının altında, tüm odaların onaylanmış rezervasyonlarını
+/// aylık bir takvimde gösteren bölüm. Backend: GET /rooms/calendar
+/// (bkz. src/actions/rooms.ts getRoomBookingsForMonth).
+class _RoomCalendarSection extends StatefulWidget {
+  const _RoomCalendarSection();
+
+  @override
+  State<_RoomCalendarSection> createState() => _RoomCalendarSectionState();
+}
+
+class _RoomCalendarSectionState extends State<_RoomCalendarSection> {
+  late DateTime _visibleMonth;
+  DateTime? _selectedDay;
+  late Future<List<CalendarBooking>> _future;
+
+  ApiClient get _client => context.read<AuthService>().client;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _visibleMonth = DateTime(now.year, now.month, 1);
+    _future = _load();
+  }
+
+  Future<List<CalendarBooking>> _load() async {
+    final monthParam = '${_visibleMonth.year}-${_visibleMonth.month.toString().padLeft(2, '0')}';
+    final data = await _client.get('/rooms/calendar', query: {'month': monthParam}) as Map<String, dynamic>;
+    return (data['bookings'] as List<dynamic>)
+        .map((json) => CalendarBooking.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  void _changeMonth(int delta) {
+    setState(() {
+      _visibleMonth = DateTime(_visibleMonth.year, _visibleMonth.month + delta, 1);
+      _selectedDay = null;
+      _future = _load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vizitColors;
+    final monthLabel = DateFormat('MMMM y', 'tr_TR').format(_visibleMonth);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.calendar_month_rounded, size: 18, color: colors.ink),
+            const SizedBox(width: 6),
+            Text(
+              'Rezervasyon takvimi',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: colors.ink),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardTheme.color,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: colors.cardShadow,
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(onPressed: () => _changeMonth(-1), icon: const Icon(Icons.chevron_left_rounded)),
+                  Text(monthLabel, style: TextStyle(fontWeight: FontWeight.w700, color: colors.ink)),
+                  IconButton(onPressed: () => _changeMonth(1), icon: const Icon(Icons.chevron_right_rounded)),
+                ],
+              ),
+              FutureBuilder<List<CalendarBooking>>(
+                future: _future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(friendlyErrorMessage(snapshot.error!), style: TextStyle(color: colors.soft)),
+                    );
+                  }
+                  return _buildGrid(context, snapshot.data ?? const []);
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGrid(BuildContext context, List<CalendarBooking> bookings) {
+    final colors = context.vizitColors;
+    final scheme = Theme.of(context).colorScheme;
+
+    final byDay = <String, List<CalendarBooking>>{};
+    for (final booking in bookings) {
+      (byDay[_dayKey(booking.startTime)] ??= []).add(booking);
+    }
+
+    final daysInMonth = DateTime(_visibleMonth.year, _visibleMonth.month + 1, 0).day;
+    final leadingEmpty = (_visibleMonth.weekday - 1) % 7; // weekday: Pzt=1..Paz=7
+    final totalCells = ((leadingEmpty + daysInMonth + 6) ~/ 7) * 7;
+
+    final today = DateTime.now();
+    final todayKey = _dayKey(DateTime(today.year, today.month, today.day));
+
+    const weekdayLabels = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'];
+    final selectedKey = _selectedDay == null ? null : _dayKey(_selectedDay!);
+
+    // Google Calendar'daki gibi odaya göre sabit bir renk ataması — bir ay
+    // boyunca aynı oda hep aynı renkte kalsın diye roomId'lerin sıralı
+    // listesindeki index'ine göre seçiliyor.
+    final roomIds = bookings.map((b) => b.roomId).toSet().toList()..sort();
+    final bgPalette = [colors.acceptBg, colors.warnBg, colors.dangerBg, colors.chipBg];
+    final inkPalette = [colors.acceptInk, colors.warnInk, colors.dangerInk, colors.chipInk];
+    Color chipBgFor(String roomId) => bgPalette[roomIds.indexOf(roomId) % bgPalette.length];
+    Color chipInkFor(String roomId) => inkPalette[roomIds.indexOf(roomId) % inkPalette.length];
+
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        Row(
+          children: weekdayLabels
+              .map(
+                (label) => Expanded(
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: colors.soft),
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+        const SizedBox(height: 6),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 7, childAspectRatio: 0.72),
+          itemCount: totalCells,
+          itemBuilder: (context, index) {
+            final dayNum = index - leadingEmpty + 1;
+            if (dayNum < 1 || dayNum > daysInMonth) return const SizedBox.shrink();
+
+            final date = DateTime(_visibleMonth.year, _visibleMonth.month, dayNum);
+            final key = _dayKey(date);
+            final dayBookings = byDay[key] ?? const <CalendarBooking>[];
+            final count = dayBookings.length;
+            final isSelected = key == selectedKey;
+            final isToday = key == todayKey;
+            const maxChips = 2;
+
+            return InkWell(
+              onTap: count == 0 ? null : () => setState(() => _selectedDay = date),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                margin: const EdgeInsets.all(1.5),
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected ? scheme.primary.withValues(alpha: 0.1) : null,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSelected ? scheme.primary : (isToday ? scheme.primary : colors.divider),
+                    width: isSelected ? 2 : (isToday ? 1.2 : 0.6),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$dayNum',
+                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: colors.ink),
+                    ),
+                    const SizedBox(height: 1),
+                    for (final booking in dayBookings.take(maxChips))
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 1),
+                        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: chipBgFor(booking.roomId),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: Text(
+                          DateFormat('HH:mm').format(booking.startTime),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 7.5,
+                            fontWeight: FontWeight.w700,
+                            color: chipInkFor(booking.roomId),
+                          ),
+                        ),
+                      ),
+                    if (count > maxChips)
+                      Text('+${count - maxChips}', style: TextStyle(fontSize: 7, color: colors.soft)),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        if (_selectedDay != null) ...[
+          const Divider(height: 24),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              DateFormat('d MMMM y', 'tr_TR').format(_selectedDay!),
+              style: TextStyle(fontWeight: FontWeight.w700, color: colors.ink),
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final booking in byDay[selectedKey] ?? const <CalendarBooking>[])
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${booking.roomName} · ${DateFormat('HH:mm').format(booking.startTime)}–${DateFormat('HH:mm').format(booking.endTime)}',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: colors.ink),
+                  ),
+                  Text(booking.label, style: TextStyle(fontSize: 12, color: colors.soft)),
+                  Text(booking.purpose, style: TextStyle(fontSize: 12, color: colors.soft)),
+                ],
+              ),
+            ),
+        ],
+      ],
     );
   }
 }

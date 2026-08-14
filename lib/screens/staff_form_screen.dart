@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/department.dart';
 import '../models/staff_member.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
@@ -19,7 +20,18 @@ class _StaffFormScreenState extends State<StaffFormScreen> {
   final _passwordCtrl = TextEditingController();
 
   String _role = StaffRole.employee;
+  String? _department;
   bool _submitting = false;
+
+  late Future<List<Department>> _departmentsFuture;
+
+  ApiClient get _client => context.read<AuthService>().client;
+
+  @override
+  void initState() {
+    super.initState();
+    _departmentsFuture = _loadDepartments();
+  }
 
   @override
   void dispose() {
@@ -27,6 +39,53 @@ class _StaffFormScreenState extends State<StaffFormScreen> {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
+  }
+
+  Future<List<Department>> _loadDepartments() async {
+    final data = await _client.get('/departments') as Map<String, dynamic>;
+    return (data['departments'] as List<dynamic>)
+        .map((json) => Department.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  // Formdan ayrılmadan hızlıca yeni departman eklemek için — tam departman
+  // yönetimi Personel ekranındaki "Departmanlar" ekranında.
+  Future<void> _quickAddDepartment() async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Yeni departman'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Departman adı'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+            child: const Text('Ekle'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty || !mounted) return;
+
+    try {
+      await _client.post('/departments', body: {'name': name});
+      if (!mounted) return;
+      setState(() {
+        _department = name;
+        _departmentsFuture = _loadDepartments();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+    }
   }
 
   Future<void> _submit() async {
@@ -39,6 +98,7 @@ class _StaffFormScreenState extends State<StaffFormScreen> {
         'email': _emailCtrl.text.trim(),
         'password': _passwordCtrl.text,
         'role': _role,
+        if (_department != null) 'department': _department,
       });
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -87,6 +147,36 @@ class _StaffFormScreenState extends State<StaffFormScreen> {
               ],
               selected: {_role},
               onSelectionChanged: (selection) => setState(() => _role = selection.first),
+            ),
+            const SizedBox(height: 14),
+            FutureBuilder<List<Department>>(
+              future: _departmentsFuture,
+              builder: (context, snapshot) {
+                final departments = snapshot.data ?? const <Department>[];
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String?>(
+                        initialValue: _department,
+                        decoration: const InputDecoration(labelText: 'Departman (opsiyonel)'),
+                        items: [
+                          const DropdownMenuItem(value: null, child: Text('Departman yok')),
+                          ...departments.map(
+                            (department) => DropdownMenuItem(value: department.name, child: Text(department.name)),
+                          ),
+                        ],
+                        onChanged: (value) => setState(() => _department = value),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Yeni departman ekle',
+                      onPressed: _quickAddDepartment,
+                      icon: const Icon(Icons.add_circle_outline_rounded),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 24),
             ElevatedButton(
