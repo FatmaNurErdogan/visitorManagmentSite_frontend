@@ -240,9 +240,15 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
                 const SizedBox(height: 14),
                 DropdownButtonFormField<Host>(
                   initialValue: _selectedHost,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Kimi ziyaret ediyorsun'),
                   items: hosts
-                      .map((host) => DropdownMenuItem(value: host, child: Text(host.displayName)))
+                      .map(
+                        (host) => DropdownMenuItem(
+                          value: host,
+                          child: Text(host.displayName, overflow: TextOverflow.ellipsis),
+                        ),
+                      )
                       .toList(),
                   onChanged: (host) => setState(() => _selectedHost = host),
                 ),
