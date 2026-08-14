@@ -28,6 +28,7 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
 
   Host? _selectedHost;
   DateTime? _scheduledAt;
+  DateTime? _scheduledEndAt;
   bool _submitting = false;
 
   ApiClient get _client => context.read<AuthService>().client;
@@ -86,7 +87,45 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
 
     setState(() {
       _scheduledAt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      // Başlangıç değişince bitiş saati de otomatik +30dk'ya taşınıyor —
+      // kullanıcı isterse aşağıdan değiştirebilir.
+      _scheduledEndAt = _scheduledAt!.add(const Duration(minutes: 30));
     });
+  }
+
+  Future<void> _pickEndTime() async {
+    if (_scheduledAt == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Önce başlangıç saatini seç.')));
+      return;
+    }
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_scheduledEndAt ?? _scheduledAt!.add(const Duration(minutes: 30))),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+    if (time == null || !mounted) return;
+
+    // Bitiş, başlangıçla aynı gün içinde olmalı — backend de bunu doğruluyor.
+    if (time.hour < 9 || time.hour > 18 || (time.hour == 18 && time.minute > 0)) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Lütfen 09:00–18:00 arasında bir bitiş saati seç.')));
+      return;
+    }
+
+    final start = _scheduledAt!;
+    final end = DateTime(start.year, start.month, start.day, time.hour, time.minute);
+    if (!end.isAfter(start)) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Bitiş saati başlangıçtan sonra olmalı.')));
+      return;
+    }
+
+    setState(() => _scheduledEndAt = end);
   }
 
   Future<void> _submit() async {
@@ -97,6 +136,10 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
     }
     if (_scheduledAt == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lütfen tarih ve saat seç.')));
+      return;
+    }
+    if (_scheduledEndAt == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lütfen bitiş saatini seç.')));
       return;
     }
 
@@ -112,6 +155,7 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
         // backend'in kendi saat dilimine göre yanlış yorumlanabilir (ör.
         // sunucu UTC'deyse cihaz Türkiye saatinden 3 saat farklı okur).
         'scheduledAt': _scheduledAt!.toUtc().toIso8601String(),
+        'scheduledEndAt': _scheduledEndAt!.toUtc().toIso8601String(),
       }) as Map<String, dynamic>;
 
       // Sohbet talep anında (PENDING) zaten açık — host onaylamasını
@@ -197,7 +241,7 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
                   borderRadius: BorderRadius.circular(999),
                   onTap: _pickSchedule,
                   child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'Tarih & saat (09:00–18:00)'),
+                    decoration: const InputDecoration(labelText: 'Başlangıç (09:00–18:00)'),
                     isEmpty: false,
                     child: Text(
                       _scheduledAt == null
@@ -206,6 +250,24 @@ class _VisitorRequestScreenState extends State<VisitorRequestScreen> {
                       style: TextStyle(color: _scheduledAt == null ? colors.soft : colors.ink),
                     ),
                   ),
+                ),
+                const SizedBox(height: 14),
+                InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: _pickEndTime,
+                  child: InputDecorator(
+                    decoration: const InputDecoration(labelText: 'Bitiş (aynı gün, 18:00\'a kadar)'),
+                    isEmpty: false,
+                    child: Text(
+                      _scheduledEndAt == null ? 'Seç' : DateFormat('HH:mm', 'tr_TR').format(_scheduledEndAt!),
+                      style: TextStyle(color: _scheduledEndAt == null ? colors.soft : colors.ink),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Aynı kişiyi bu saat aralığında ziyaret etmek isteyen başka bir talep varsa yeni talebin oluşturulamaz.',
+                  style: TextStyle(fontSize: 11.5, color: colors.soft),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(

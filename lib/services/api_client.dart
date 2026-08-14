@@ -32,6 +32,13 @@ const Map<String, String> _errorTranslations = {
   'A room with this name already exists.': 'Bu isimde bir oda zaten var.',
   'Please select a meeting room.': 'Lütfen bir toplantı odası seçin.',
   'This visit request has already been processed.': 'Bu ziyaret talebi zaten işlendi.',
+  'Please fill in all required fields.': 'Lütfen tüm zorunlu alanları doldurun.',
+  'Please provide a valid date and time.': 'Lütfen geçerli bir tarih ve saat girin.',
+  'Please pick a date and time in the future.': 'Lütfen gelecekte bir tarih ve saat seçin.',
+  'Please pick a start time between 9:00 and 18:00.': 'Lütfen 09:00–18:00 arasında bir başlangıç saati seçin.',
+  "Please pick an end time between 9:00 and 18:00 on the same day.":
+      'Lütfen aynı gün içinde, 18:00\'a kadar bir bitiş saati seçin.',
+  "Please select who you're visiting.": 'Lütfen kimi ziyaret ettiğinizi seçin.',
   "Please pick an end time after the visit's scheduled start.":
       'Lütfen ziyaretin başlangıcından sonraki bir bitiş saati seçin.',
   'This room is already booked for that time.': 'Bu oda o saat aralığında zaten rezerve edilmiş.',
@@ -62,6 +69,13 @@ String friendlyErrorMessage(Object error) {
     if (error.message.length > 'Message can\'t be longer than '.length &&
         error.message.startsWith("Message can't be longer than")) {
       return 'Mesaj çok uzun (en fazla 2000 karakter).';
+    }
+    // "<Host adı> already has another visit scheduled in that time range.
+    // Please pick a different time." — host adı değişken olduğu için map'e
+    // sabit girilemiyor, kalıba bakıp çeviriyoruz.
+    if (error.message.contains('already has another visit scheduled in that time range')) {
+      final host = error.message.split(' already has').first;
+      return '$host bu saat aralığında zaten başka bir ziyaretle meşgul. Lütfen farklı bir saat seçin.';
     }
     return _errorTranslations[error.message] ?? error.message;
   }

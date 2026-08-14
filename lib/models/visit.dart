@@ -44,6 +44,7 @@ class Visit {
     required this.hostEmployee,
     required this.visitReason,
     required this.scheduledAt,
+    required this.scheduledEndAt,
     required this.status,
     required this.requestedAt,
     this.respondedAt,
@@ -56,6 +57,7 @@ class Visit {
   final Host hostEmployee;
   final String visitReason;
   final DateTime scheduledAt;
+  final DateTime scheduledEndAt;
   final String status;
   final DateTime requestedAt;
   final DateTime? respondedAt;
@@ -75,6 +77,7 @@ class Visit {
       hostEmployee: Host.fromJson(json['hostEmployee'] as Map<String, dynamic>),
       visitReason: json['visitReason'] as String,
       scheduledAt: parseLocal(json['scheduledAt'] as String),
+      scheduledEndAt: parseLocal(json['scheduledEndAt'] as String),
       status: json['status'] as String,
       requestedAt: parseLocal(json['requestedAt'] as String),
       respondedAt: parseNullable(json['respondedAt']),

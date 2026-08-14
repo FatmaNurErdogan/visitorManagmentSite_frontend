@@ -79,6 +79,7 @@ class OfflineMock {
         'hostEmployee': _hostFrom(emp1),
         'visitReason': 'Ürün demo görüşmesi',
         'scheduledAt': _iso(today.add(const Duration(hours: 14))),
+        'scheduledEndAt': _iso(today.add(const Duration(hours: 14, minutes: 30))),
         'status': 'PENDING',
         'requestedAt': _iso(now.subtract(const Duration(hours: 1))),
         'respondedAt': null,
@@ -91,6 +92,7 @@ class OfflineMock {
         'hostEmployee': _hostFrom(emp2),
         'visitReason': 'Sözleşme görüşmesi',
         'scheduledAt': _iso(today.add(const Duration(hours: 10))),
+        'scheduledEndAt': _iso(today.add(const Duration(hours: 10, minutes: 30))),
         'status': 'ACCEPTED',
         'requestedAt': _iso(now.subtract(const Duration(days: 1))),
         'respondedAt': _iso(now.subtract(const Duration(days: 1))),
@@ -103,6 +105,7 @@ class OfflineMock {
         'hostEmployee': _hostFrom(emp1),
         'visitReason': 'Teknik görüşme',
         'scheduledAt': _iso(today.add(const Duration(hours: 9))),
+        'scheduledEndAt': _iso(today.add(const Duration(hours: 9, minutes: 30))),
         'status': 'CHECKED_IN',
         'requestedAt': _iso(now.subtract(const Duration(days: 2))),
         'respondedAt': _iso(now.subtract(const Duration(days: 2))),
@@ -115,6 +118,7 @@ class OfflineMock {
         'hostEmployee': _hostFrom(emp2),
         'visitReason': 'Geçmiş ziyaret',
         'scheduledAt': _iso(now.subtract(const Duration(days: 3))),
+        'scheduledEndAt': _iso(now.subtract(const Duration(days: 3)).add(const Duration(minutes: 30))),
         'status': 'CHECKED_OUT',
         'requestedAt': _iso(now.subtract(const Duration(days: 4))),
         'respondedAt': _iso(now.subtract(const Duration(days: 4))),
@@ -215,6 +219,63 @@ class OfflineMock {
       final status = query?['status'];
       final visits = status == null ? _visits : _visits.where((v) => v['status'] == status).toList();
       return {'visits': visits};
+    }
+
+    // Backend'deki createVisitRequestCore'un basitleştirilmiş offline
+    // karşılığı — aynı host için, henüz sonuçlanmamış (PENDING/
+    // PENDING_ADMIN_APPROVAL/ACCEPTED/CHECKED_IN) bir ziyaretle çakışan yeni
+    // talep oluşturulamıyor. Gerçek sunucudaki transaction/race-condition
+    // koruması burada yok — bu sadece UI akışını test etmek için.
+    if (method == 'POST' && path == '/visits') {
+      final name = (b['name'] as String?)?.trim() ?? '';
+      final hostEmployeeId = b['hostEmployeeId'] as String?;
+      final scheduledAtRaw = b['scheduledAt'] as String?;
+      final scheduledEndAtRaw = b['scheduledEndAt'] as String?;
+      if (name.isEmpty || hostEmployeeId == null || scheduledAtRaw == null || scheduledEndAtRaw == null) {
+        throw ApiException('Please fill in all required fields.', statusCode: 400);
+      }
+
+      final scheduledAt = DateTime.parse(scheduledAtRaw);
+      final scheduledEndAt = DateTime.parse(scheduledEndAtRaw);
+      if (!scheduledEndAt.isAfter(scheduledAt)) {
+        throw ApiException('End time must be after the start time.', statusCode: 400);
+      }
+
+      const openStatuses = ['PENDING', 'PENDING_ADMIN_APPROVAL', 'ACCEPTED', 'CHECKED_IN'];
+      final conflict = _visits.any((v) {
+        final host = v['hostEmployee'] as Map<String, dynamic>;
+        if (host['id'] != hostEmployeeId) return false;
+        if (!openStatuses.contains(v['status'])) return false;
+        final vStart = DateTime.parse(v['scheduledAt'] as String);
+        final vEnd = DateTime.parse(v['scheduledEndAt'] as String);
+        return vStart.isBefore(scheduledEndAt) && vEnd.isAfter(scheduledAt);
+      });
+
+      final host = _staff.firstWhere((s) => s['id'] == hostEmployeeId, orElse: () => const {});
+      if (conflict) {
+        throw ApiException(
+          '${host['name'] ?? 'Host'} already has another visit scheduled in that time range. Please pick a different time.',
+          statusCode: 400,
+        );
+      }
+
+      final visitorId = _nextId('vis');
+      final visit = {
+        'id': _nextId('visit'),
+        'visitor': _visitor(visitorId, name, (b['phone'] as String?) ?? '', company: b['company'] as String?),
+        'hostEmployee': _hostFrom(host),
+        'visitReason': (b['visitReason'] as String?) ?? '',
+        'scheduledAt': scheduledAtRaw,
+        'scheduledEndAt': scheduledEndAtRaw,
+        'status': 'PENDING',
+        'requestedAt': _iso(DateTime.now()),
+        'respondedAt': null,
+        'checkedInAt': null,
+        'checkedOutAt': null,
+        'accessToken': _nextId('token'),
+      };
+      _visits.add(visit);
+      return {'visit': visit};
     }
 
     if (method == 'GET' && path == '/rooms') {
