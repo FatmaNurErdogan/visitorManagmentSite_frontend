@@ -30,7 +30,7 @@ class LandingScreen extends StatelessWidget {
                 child: Icon(Icons.badge_outlined, color: scheme.primary, size: 30),
               ),
               const SizedBox(height: 20),
-              Text('Foyer', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: colors.ink)),
+              Text('Visit', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: colors.ink)),
               const SizedBox(height: 6),
               Text(
                 'Ofis ziyaretçi ve personel giriş sistemi',

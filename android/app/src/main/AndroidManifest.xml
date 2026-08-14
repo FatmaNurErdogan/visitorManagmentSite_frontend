@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="Foyer"
+        android:label="Visit"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -25,7 +25,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             <!-- App Links: ziyaretçinin onay mailindeki https://{domain}/visit/{token}
-                 linkine tıklaması Foyer'ı açsın diye. android:autoVerify, Android'in
+                 linkine tıklaması Visit'i açsın diye. android:autoVerify, Android'in
                  assetlinks.json'ı domain'den çekip doğrulamasını tetikler — bu domain
                  gerçekten yayında ve assetlinks.json doğru olmadan çalışmaz. -->
             <intent-filter android:autoVerify="true">
