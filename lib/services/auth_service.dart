@@ -65,6 +65,16 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// SADECE DEBUG: backend'e/veritabanına hiç dokunmadan yerel bir admin
+  /// oturumu açar (kalıcı depoya yazmaz). Backend veritabanına erişilemediği
+  /// durumlarda arayüzü test edebilmek için — login_screen.dart'taki debug
+  /// butonundan çağrılır.
+  void loginOffline({required String name, required String email, required String role}) {
+    client.token = 'debug-offline-token';
+    _applyStaff({'id': 'debug-offline', 'name': name, 'email': email, 'role': role});
+    notifyListeners();
+  }
+
   Future<void> logout() async {
     client.token = null;
     _staffId = null;

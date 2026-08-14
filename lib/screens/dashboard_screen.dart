@@ -125,9 +125,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final auth = context.watch<AuthService>();
     final role = auth.role;
     final showApprovals = role == StaffRole.employee || role == StaffRole.admin;
+    // Giriş/çıkış onayı sadece resepsiyonun işi — admin dahil burada değil
+    // (bkz. backend'deki src/actions/visits.ts requireReceptionist).
     final showAdminApprovals = role == StaffRole.admin;
     final showToday = role == StaffRole.receptionist;
     final colors = context.vizitColors;
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -144,9 +147,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.all(20),
               children: [
                 if (showApprovals) ...[
-                  Text(
-                    'Onayını bekleyenler · ${data.pendingApprovals.length}',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: colors.soft),
+                  Row(
+                    children: [
+                      Icon(Icons.pending_actions_rounded, size: 18, color: colors.warnInk),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Onayını bekleyenler · ${data.pendingApprovals.length}',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: colors.warnInk),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 10),
                   if (data.pendingApprovals.isEmpty)
@@ -244,9 +253,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 12),
                 ],
                 if (showToday) ...[
-                  Text(
-                    'Bugünün ziyaretleri · ${data.todaysVisits.length}',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: colors.soft),
+                  Row(
+                    children: [
+                      Icon(Icons.event_available_rounded, size: 18, color: scheme.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Bugünün ziyaretleri · ${data.todaysVisits.length}',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: scheme.primary),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 10),
                   if (data.todaysVisits.isEmpty)

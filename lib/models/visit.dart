@@ -77,16 +77,20 @@ class Visit {
   final String? adminRejectionReason;
 
   factory Visit.fromJson(Map<String, dynamic> json) {
-    DateTime? parseNullable(Object? value) => value == null ? null : DateTime.parse(value as String);
+    // Backend UTC ISO8601 döndürüyor ("Z" son eki) — .toLocal() olmadan
+    // DateTime.parse sonucu isUtc=true kalır ve ekranlarda saat, cihazın
+    // yerel saatinden (TR: UTC+3) 3 saat geride görünür.
+    DateTime parseLocal(String value) => DateTime.parse(value).toLocal();
+    DateTime? parseNullable(Object? value) => value == null ? null : parseLocal(value as String);
 
     return Visit(
       id: json['id'] as String,
       visitor: Visitor.fromJson(json['visitor'] as Map<String, dynamic>),
       hostEmployee: Host.fromJson(json['hostEmployee'] as Map<String, dynamic>),
       visitReason: json['visitReason'] as String,
-      scheduledAt: DateTime.parse(json['scheduledAt'] as String),
+      scheduledAt: parseLocal(json['scheduledAt'] as String),
       status: json['status'] as String,
-      requestedAt: DateTime.parse(json['requestedAt'] as String),
+      requestedAt: parseLocal(json['requestedAt'] as String),
       respondedAt: parseNullable(json['respondedAt']),
       checkedInAt: parseNullable(json['checkedInAt']),
       checkedOutAt: parseNullable(json['checkedOutAt']),

@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/staff_member.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../widgets/theme_toggle_button.dart';
@@ -93,6 +95,22 @@ class _LoginScreenState extends State<LoginScreen> {
                     )
                   : const Text('Giriş Yap'),
             ),
+            if (kDebugMode) ...[
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () {
+                  const name = 'Debug Admin';
+                  context.read<AuthService>().client.enableOfflineMock(currentStaffName: name);
+                  context.read<AuthService>().loginOffline(
+                        name: name,
+                        email: _emailCtrl.text.trim().isEmpty ? 'debug@local' : _emailCtrl.text.trim(),
+                        role: StaffRole.admin,
+                      );
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
+                child: const Text('Offline admin (dev)'),
+              ),
+            ],
           ],
         ),
       ),
