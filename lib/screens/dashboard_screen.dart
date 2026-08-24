@@ -11,6 +11,7 @@ import '../widgets/empty_state.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/visit_card.dart';
 import 'admin_approve_room_screen.dart';
+import 'staff_chat_screen.dart';
 
 class DashboardData {
   DashboardData({
@@ -135,6 +136,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // Not: "Bugünün ziyaretleri" (resepsiyon) bölümünde sohbet butonu yok —
+  // backend sohbeti sadece host veya admin'e açıyor, resepsiyon ikisi de
+  // değil (bkz. visitorSite'daki authorizeStaffChat).
+  void _openChat(Visit visit) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => StaffChatScreen(visit: visit)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
@@ -191,6 +201,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         visit: visit,
                         subtitle: visit.visitor.company ?? '—',
                         showReason: true,
+                        onChat: () => _openChat(visit),
                         actions: Row(
                           children: [
                             Expanded(
@@ -242,6 +253,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         visit: visit,
                         subtitle: '${visit.hostEmployee.name} onayladı, senin onayını bekliyor',
                         showReason: true,
+                        onChat: () => _openChat(visit),
                         actions: Row(
                           children: [
                             Expanded(

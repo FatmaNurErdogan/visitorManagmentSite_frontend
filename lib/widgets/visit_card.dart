@@ -15,12 +15,14 @@ class VisitCard extends StatelessWidget {
     this.subtitle,
     this.showReason = false,
     this.actions,
+    this.onChat,
   });
 
   final Visit visit;
   final String? subtitle;
   final bool showReason;
   final Widget? actions;
+  final VoidCallback? onChat;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +48,17 @@ class VisitCard extends StatelessWidget {
                   style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: colors.ink),
                 ),
               ),
+              if (onChat != null) ...[
+                InkWell(
+                  onTap: onChat,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(Icons.chat_bubble_outline_rounded, size: 18, color: colors.soft),
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
               StatusPill(status: visit.status),
             ],
           ),

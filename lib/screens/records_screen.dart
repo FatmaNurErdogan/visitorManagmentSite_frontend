@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/staff_member.dart';
 import '../models/visit.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
@@ -8,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../widgets/async_state.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/visit_card.dart';
+import 'staff_chat_screen.dart';
 
 class RecordsScreen extends StatefulWidget {
   const RecordsScreen({super.key});
@@ -43,9 +45,19 @@ class _RecordsScreenState extends State<RecordsScreen> {
     });
   }
 
+  // Sohbet sadece host veya admin'e açık (bkz. backend'deki
+  // authorizeStaffChat) — Kayıtlar tüm ziyaretleri, herkese gösteriyor.
+  void _openChat(Visit visit) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => StaffChatScreen(visit: visit)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.vizitColors;
+    final auth = context.watch<AuthService>();
+    final isAdmin = auth.role == StaffRole.admin;
 
     return Scaffold(
       appBar: AppBar(
@@ -98,9 +110,11 @@ class _RecordsScreenState extends State<RecordsScreen> {
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final visit = visits[index];
+                      final canChat = isAdmin || auth.staffId == visit.hostEmployee.id;
                       return VisitCard(
                         visit: visit,
                         subtitle: '${visit.hostEmployee.name} · ${visit.visitor.company ?? "—"}',
+                        onChat: canChat ? () => _openChat(visit) : null,
                       );
                     },
                   );
