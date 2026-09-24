@@ -7,7 +7,7 @@ import 'package:flutter_application_1/services/api_client.dart';
 import 'package:flutter_application_1/services/auth_service.dart';
 
 void main() {
-  testWidgets('Foyer app builds without crashing', (WidgetTester tester) async {
+  testWidgets('Visit app builds without crashing', (WidgetTester tester) async {
     final authService = AuthService(client: ApiClient());
 
     await tester.pumpWidget(

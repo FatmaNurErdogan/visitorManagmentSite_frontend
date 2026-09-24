@@ -66,7 +66,7 @@ class _VizitAppState extends State<VizitApp> {
 
     return MaterialApp(
       navigatorKey: rootNavigatorKey,
-      title: 'Foyer',
+      title: 'Visit',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
